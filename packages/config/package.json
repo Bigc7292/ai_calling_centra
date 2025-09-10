@@ -1,0 +1,6 @@
+﻿{
+  "name": "@eva/config",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts"
+}
