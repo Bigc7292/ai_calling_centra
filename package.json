@@ -5,5 +5,12 @@
     "dev:all": "npm run dev --workspace=@eva/frontend --workspace=@eva/core-api --parallel",
     "build": "pnpm -r build"
   },
-  "workspaces": ["apps/*","services/*","packages/*"]
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@types/node": "^24.3.1"
+  }
 }

@@ -4,7 +4,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().optional().default(3001),
   SUPABASE_URL: z.string().url().min(2),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(2),
-  SUPABASE_JWKS_URL: z.string().url().optional().default((env) => `${env.SUPABASE_URL}/auth/v1/keys`),
+  SUPABASE_JWKS_URL: z.string().url().min(2), // Made required
   STRIPE_SECRET_KEY: z.string().min(2),
   STRIPE_WEBHOOK_SECRET: z.string().min(2),
   WEB_BASE_URL: z.string().url().default("http://localhost:3000"),

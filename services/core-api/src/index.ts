@@ -1,16 +1,16 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "@eva/config";
-import { authMiddleware, requireRole } from "./auth";
+import { loadEnv } from "@eva/config/dist"; // Explicitly point to dist for ES module resolution
+import { authMiddleware, requireRole } from "./auth.js"; // Added .js extension
 import Stripe from "stripe";
-import analyticsRouter from "./routes/analytics";
+import analyticsRouter from "./routes/analytics.js"; // Added .js extension
 
 const app = express();
 
 // Stripe webhook needs the raw body, so apply json parsing conditionally
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.originalUrl === "/webhooks/stripe") {
     next();
   } else {
@@ -23,10 +23,10 @@ const env = loadEnv();
 const supa = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/health", (_req: Request, res: Response) => res.json({ ok: true }));
 
 // Minimal bootstrap tenant endpoint (one-time)
-app.post("/tenants/bootstrap", async (req, res) => {
+app.post("/tenants/bootstrap", async (req: Request, res: Response) => {
   try {
     const body = z.object({
       userId: z.string().uuid(),
@@ -51,7 +51,7 @@ app.post("/tenants/bootstrap", async (req, res) => {
 });
 
 // Stripe Webhook
-app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"];
   let event: Stripe.Event;
 
@@ -98,12 +98,12 @@ app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (r
 // Protected routes
 app.use(authMiddleware);
 
-app.get("/me", (req, res) => {
+app.get("/me", (req: Request, res: Response) => {
   res.json({ user: req.user, tenantId: req.tenantId, role: req.role });
 });
 
 // Contact APIs
-app.get("/contacts", async (req, res) => {
+app.get("/contacts", async (req: Request, res: Response) => {
   try {
     const { q } = req.query;
     let query = supa.from("contacts").select("id, name, phone, email").eq("tenant_id", req.tenantId);
@@ -121,7 +121,7 @@ app.get("/contacts", async (req, res) => {
   }
 });
 
-app.get("/contacts/:id", async (req, res) => {
+app.get("/contacts/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { data: contact, error: contactError } = await supa.from("contacts").select("*").eq("tenant_id", req.tenantId).eq("id", id).single();
@@ -139,7 +139,7 @@ app.get("/contacts/:id", async (req, res) => {
 });
 
 // Broker Export API
-app.get("/exports/broker", async (req, res) => {
+app.get("/exports/broker", async (req: Request, res: Response) => {
   try {
     const { campaignId, from, to } = req.query;
 
@@ -174,7 +174,7 @@ app.get("/exports/broker", async (req, res) => {
 });
 
 // Billing APIs
-app.post("/billing/checkout", requireRole("OWNER"), async (req, res) => {
+app.post("/billing/checkout", requireRole("OWNER"), async (req: Request, res: Response) => {
   try {
     const { lookup_key, quantity = 1 } = z.object({
       lookup_key: z.string(),
@@ -208,7 +208,7 @@ app.post("/billing/checkout", requireRole("OWNER"), async (req, res) => {
         userId: req.user?.id,
         lookupKey: lookup_key,
       },
-    });
+    } as Stripe.Checkout.SessionCreateParams);
 
     res.json({ url: session.url });
   } catch (e: any) {
@@ -220,7 +220,7 @@ app.post("/billing/checkout", requireRole("OWNER"), async (req, res) => {
 // Mount analytics router
 app.use("/analytics", analyticsRouter);
 
-app.get("/admin-only", requireRole("ADMIN"), (req, res) => {
+app.get("/admin-only", requireRole("ADMIN"), (req: Request, res: Response) => {
   res.json({ message: "Welcome, Admin!", user: req.user, tenantId: req.tenantId, role: req.role });
 });
 

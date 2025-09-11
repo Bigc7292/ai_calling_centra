@@ -1,7 +1,7 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "@eva/config";
-import { authMiddleware, requireRole } from "../auth";
+import { loadEnv } from "@eva/config/dist"; // Explicitly point to dist for ES module resolution
+import { authMiddleware } from "../auth.js"; // Added .js extension
 import { AgentKpi, AssistantKpi, CampaignKpi, DailyMetric, GeoMeetingRow, HourOfDayRow } from "@eva/types";
 
 const analyticsRouter = Router();
@@ -51,25 +51,25 @@ const getMockGeoMeetingRows = (tenantId: string): GeoMeetingRow[] => [
   { lat: 35.689487, lon: 139.691711, city: "Tokyo", country: "Japan", starts_at: "2023-10-05T16:00:00Z", meetings: 2 },
 ];
 
-analyticsRouter.get("/daily", async (req, res) => {
+analyticsRouter.get("/daily", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
   // In a real scenario, fetch from v_daily_metrics table
   res.json(getMockDailyMetrics(req.tenantId));
 });
 
-analyticsRouter.get("/campaigns", async (req, res) => {
+analyticsRouter.get("/campaigns", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
   // In a real scenario, fetch from v_campaign_kpis table
   res.json(getMockCampaignKpis(req.tenantId));
 });
 
-analyticsRouter.get("/assistants", async (req, res) => {
+analyticsRouter.get("/assistants", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
   // In a real scenario, fetch from v_assistant_kpis table
   res.json(getMockAssistantKpis(req.tenantId));
 });
 
-analyticsRouter.get("/agents", async (req, res) => {
+analyticsRouter.get("/agents", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
 
   // In a real scenario, execute SQL query as described in the prompt
@@ -77,13 +77,13 @@ analyticsRouter.get("/agents", async (req, res) => {
   res.json(getMockAgentKpis(req.tenantId));
 });
 
-analyticsRouter.get("/hourly", async (req, res) => {
+analyticsRouter.get("/hourly", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
   // In a real scenario, fetch from v_hour_of_day table
   res.json(getMockHourOfDayRows(req.tenantId));
 });
 
-analyticsRouter.get("/geo", async (req, res) => {
+analyticsRouter.get("/geo", async (req: Request, res: Response) => {
   if (!req.tenantId) return res.status(403).json({ error: "Forbidden: No tenant ID." });
   // In a real scenario, fetch from v_geo_meetings table
   res.json(getMockGeoMeetingRows(req.tenantId));
