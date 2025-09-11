@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "@eva/config/dist"; // Explicitly point to dist for ES module resolution
+import { loadEnv } from "@eva/config/dist/index.js"; // Explicitly point to index.js
 import { authMiddleware, requireRole } from "./auth.js"; // Added .js extension
 import Stripe from "stripe";
 import analyticsRouter from "./routes/analytics.js"; // Added .js extension
