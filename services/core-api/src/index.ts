@@ -1,15 +1,27 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "@eva/config";
+import { authMiddleware, requireRole } from "./auth";
+import Stripe from "stripe";
+import analyticsRouter from "./routes/analytics";
 
 const app = express();
+
+// Stripe webhook needs the raw body, so apply json parsing conditionally
+app.use((req, res, next) => {
+  if (req.originalUrl === "/webhooks/stripe") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(cors());
-app.use(express.json());
 
 const env = loadEnv();
 const supa = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -36,6 +48,180 @@ app.post("/tenants/bootstrap", async (req, res) => {
   } catch (e: any) {
     res.status(400).json({ error: e?.message || "bad_request" });
   }
+});
+
+// Stripe Webhook
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig!, env.STRIPE_WEBHOOK_SECRET);
+  } catch (err: any) {
+    console.log(`❌ Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Log the event for now as per acceptance criteria
+  console.log(`✅ Stripe Webhook received: ${event.type}`);
+
+  // Handle the event
+  switch (event.type) {
+    case "checkout.session.completed":
+      const checkoutSession = event.data.object as Stripe.Checkout.Session;
+      console.log("Checkout session completed:", checkoutSession);
+      // TODO: Grant entitlements based on checkoutSession.metadata or line items
+      break;
+    case "customer.subscription.created":
+      const subscriptionCreated = event.data.object as Stripe.Subscription;
+      console.log("Subscription created:", subscriptionCreated);
+      // TODO: Update user's subscription status
+      break;
+    case "customer.subscription.updated":
+      const subscriptionUpdated = event.data.object as Stripe.Subscription;
+      console.log("Subscription updated:", subscriptionUpdated);
+      // TODO: Update user's subscription status
+      break;
+    case "customer.subscription.deleted":
+      const subscriptionDeleted = event.data.object as Stripe.Subscription;
+      console.log("Subscription deleted:", subscriptionDeleted);
+      // TODO: Revoke user's subscription access
+      break;
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+
+// Protected routes
+app.use(authMiddleware);
+
+app.get("/me", (req, res) => {
+  res.json({ user: req.user, tenantId: req.tenantId, role: req.role });
+});
+
+// Contact APIs
+app.get("/contacts", async (req, res) => {
+  try {
+    const { q } = req.query;
+    let query = supa.from("contacts").select("id, name, phone, email").eq("tenant_id", req.tenantId);
+
+    if (q) {
+      query = query.ilike("name", `%${q}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message || "bad_request" });
+  }
+});
+
+app.get("/contacts/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: contact, error: contactError } = await supa.from("contacts").select("*").eq("tenant_id", req.tenantId).eq("id", id).single();
+    if (contactError) return res.status(404).json({ error: "Contact not found" });
+
+    // Stubs for related data
+    const calls: any[] = [];
+    const transcripts: any[] = [];
+    const meetings: any[] = [];
+
+    res.json({ contact, calls, transcripts, meetings });
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message || "bad_request" });
+  }
+});
+
+// Broker Export API
+app.get("/exports/broker", async (req, res) => {
+  try {
+    const { campaignId, from, to } = req.query;
+
+    // Set CSV headers
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=\"broker_export.csv\"");
+
+    // Write CSV headers
+    res.write("name,phone,email,interests,budget_usd,nationality,meeting_time,meeting_url\n");
+
+    // Fetch data - simplified for now, constrained by tenant_id
+    let query = supa.from("contacts").select("name, phone, email").eq("tenant_id", req.tenantId);
+
+    // Add dummy data for fields not yet in contacts table
+    const dummyInterests = "Real Estate";
+    const dummyBudget = 100000;
+    const dummyNationality = "Unknown";
+    const dummyMeetingTime = "";
+    const dummyMeetingUrl = "";
+
+    const { data: contacts, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+
+    contacts.forEach(contact => {
+      res.write(`${contact.name || ''},${contact.phone || ''},${contact.email || ''},${dummyInterests},${dummyBudget},${dummyNationality},${dummyMeetingTime},${dummyMeetingUrl}\n`);
+    });
+
+    res.end();
+  } catch (e: any) {
+    res.status(400).json({ error: e?.message || "bad_request" });
+  }
+});
+
+// Billing APIs
+app.post("/billing/checkout", requireRole("OWNER"), async (req, res) => {
+  try {
+    const { lookup_key, quantity = 1 } = z.object({
+      lookup_key: z.string(),
+      quantity: z.number().optional()
+    }).parse(req.body);
+
+    const prices = await stripe.prices.list({
+      lookup_keys: [lookup_key],
+      expand: ['data.product'],
+    });
+
+    const price = prices.data[0];
+
+    if (!price) {
+      return res.status(404).json({ error: "Price not found." });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      billing_address_collection: "auto",
+      line_items: [
+        {
+          price: price.id,
+          quantity: quantity,
+        },
+      ],
+      mode: price.type === "recurring" ? "subscription" : "payment",
+      success_url: `${env.WEB_BASE_URL}/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${env.WEB_BASE_URL}/settings/billing?canceled=true`,
+      metadata: {
+        tenantId: req.tenantId,
+        userId: req.user?.id,
+        lookupKey: lookup_key,
+      },
+    });
+
+    res.json({ url: session.url });
+  } catch (e: any) {
+    console.error("Stripe Checkout error:", e);
+    res.status(400).json({ error: e?.message || "Bad request" });
+  }
+});
+
+// Mount analytics router
+app.use("/analytics", analyticsRouter);
+
+app.get("/admin-only", requireRole("ADMIN"), (req, res) => {
+  res.json({ message: "Welcome, Admin!", user: req.user, tenantId: req.tenantId, role: req.role });
 });
 
 const port = Number(process.env.PORT || env.PORT);

@@ -1,9 +1,8 @@
 {
   "name": "eva_eva",
   "private": true,
-  "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "dev:all": "pnpm -r --parallel dev",
+    "dev:all": "npm run dev --workspace=@eva/frontend --workspace=@eva/core-api --parallel",
     "build": "pnpm -r build"
   },
   "workspaces": ["apps/*","services/*","packages/*"]

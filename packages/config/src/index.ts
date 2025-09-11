@@ -1,11 +1,20 @@
-﻿export function loadEnv() {
-  const env = {
-    PORT: process.env.PORT || "4000",
-    SUPABASE_URL: process.env.SUPABASE_URL || "",
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-  };
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn("[config] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-  }
-  return env;
-}
+import { z } from "zod";
+
+const envSchema = z.object({
+  PORT: z.coerce.number().optional().default(3001),
+  SUPABASE_URL: z.string().url().min(2),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(2),
+  SUPABASE_JWKS_URL: z.string().url().optional().default((env) => `${env.SUPABASE_URL}/auth/v1/keys`),
+  STRIPE_SECRET_KEY: z.string().min(2),
+  STRIPE_WEBHOOK_SECRET: z.string().min(2),
+  WEB_BASE_URL: z.string().url().default("http://localhost:3000"),
+  PGHOST: z.string().optional(),
+  PGPORT: z.coerce.number().optional(),
+  PGDATABASE: z.string().optional(),
+  PGUSER: z.string().optional(),
+  PGPASSWORD: z.string().optional(),
+});
+
+export const loadEnv = () => {
+  return envSchema.parse(process.env);
+};
