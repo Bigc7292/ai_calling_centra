@@ -1,6 +1,6 @@
 import { supabase } from "../components/AuthGate";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
 
 export const apiFetch = async (url: string, options?: RequestInit) => {
   const { data: { session } } = await supabase.auth.getSession();
