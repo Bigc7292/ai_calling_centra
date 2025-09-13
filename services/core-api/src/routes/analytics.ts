@@ -1,11 +1,19 @@
 import { Router, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "@eva/config/dist"; // Explicitly point to dist for ES module resolution
 import { authMiddleware } from "../auth.js"; // Added .js extension
 import { AgentKpi, AssistantKpi, CampaignKpi, DailyMetric, GeoMeetingRow, HourOfDayRow } from "@eva/types";
+import { config } from "dotenv";
+
+// Load environment variables from .env file
+config({ path: "../../../.env" });
+
+// Load environment variables
+const env = {
+  SUPABASE_URL: process.env.SUPABASE_URL!,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!
+};
 
 const analyticsRouter = Router();
-const env = loadEnv();
 const supaServiceRole = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
 // All analytics routes require authentication

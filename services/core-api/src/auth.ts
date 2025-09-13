@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { loadEnv } from "@eva/config";
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 
-const env = loadEnv();
+// Load environment variables from .env file
+config({ path: "../../.env" });
+
+// Load environment variables
+const env = {
+  SUPABASE_URL: process.env.SUPABASE_URL!,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!
+};
+
 const JWKS = createRemoteJWKSet(new URL(`${env.SUPABASE_URL}/auth/v1/keys`));
 const supaServiceRole = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 

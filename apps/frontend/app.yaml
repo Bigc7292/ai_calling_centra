@@ -1,0 +1,38 @@
+# Google Cloud deployment configuration for Next.js frontend
+# This App Engine configuration deploys the frontend application
+
+runtime: nodejs18
+
+# Environment variables (set these in Google Cloud Console)
+env_variables:
+  NODE_ENV: production
+  NEXT_PUBLIC_SUPABASE_URL: https://irfegiqnudhmimhgxkay.supabase.co
+  # NEXT_PUBLIC_SUPABASE_ANON_KEY: set this in Cloud Console for security
+
+# Automatic scaling configuration
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+  target_throughput_utilization: 0.6
+
+# Resource allocation
+resources:
+  cpu: 1
+  memory_gb: 1
+  disk_size_gb: 10
+
+# Build configuration
+build_env_variables:
+  NODE_ENV: production
+
+# Custom build command
+handlers:
+  # Handle static assets
+  - url: /.*
+    static_files: apps/frontend/.next/static/\1
+    upload: apps/frontend/.next/static/.*
+
+  # Handle all other requests
+  - url: /.*
+    script: auto

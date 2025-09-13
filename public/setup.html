@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Setup - AI Calling Center</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 User Setup</h1>
+        
+        <div class="info">
+            <strong>Setup Instructions:</strong><br>
+            1. Enter the email address you want to set up<br>
+            2. Choose a tenant name for the organization<br>
+            3. If the user doesn't exist, provide a password to create them<br>
+            4. Click "Setup User" to configure everything
+        </div>
+
+        <form id="setupForm">
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" name="email" required placeholder="drivendatadynamics@gmail.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="tenantName">Tenant/Organization Name:</label>
+                <input type="text" id="tenantName" name="tenantName" required placeholder="AI Calling Center">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password (for new users):</label>
+                <input type="password" id="password" name="password" placeholder="Leave empty if user already exists">
+            </div>
+            
+            <button type="submit" id="setupBtn">Setup User</button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('setupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const tenantName = document.getElementById('tenantName').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('setupBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Setting up...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                const response = await fetch('http://localhost:4000/tenants/bootstrap', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        tenantName: tenantName,
+                        password: password || undefined
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p><strong>User:</strong> ${result.email}</p>
+                        <p><strong>User ID:</strong> ${result.userId}</p>
+                        <p><strong>Tenant ID:</strong> ${result.tenantId}</p>
+                        <p><strong>Message:</strong> ${result.message}</p>
+                        <p><em>The user can now log in to the application!</em></p>
+                    `;
+                } else {
+                    throw new Error(result.error || 'Setup failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Error</h3>
+                    <p>${error.message}</p>
+                    <p><em>Please check the console for more details and ensure the API server is running.</em></p>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Setup User';
+                resultDiv.style.display = 'block';
+            }
+        });
+
+        // Pre-fill the email field
+        document.getElementById('email').value = 'drivendatadynamics@gmail.com';
+        document.getElementById('tenantName').value = 'AI Calling Center';
+    </script>
+</body>
+</html>

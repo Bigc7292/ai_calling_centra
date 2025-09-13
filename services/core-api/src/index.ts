@@ -2,10 +2,29 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { loadEnv } from "@eva/config/dist/index.js"; // Explicitly point to index.js
 import { authMiddleware, requireRole } from "./auth.js"; // Added .js extension
 import Stripe from "stripe";
 import analyticsRouter from "./routes/analytics.js"; // Added .js extension
+import path from "path";
+import { fileURLToPath } from "url";
+import { config } from "dotenv";
+
+// Load environment variables from .env file
+config({ path: "../../.env" });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+const env = {
+  PORT: Number(process.env.PORT) || 4000,
+  SUPABASE_URL: process.env.SUPABASE_URL!,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  SUPABASE_JWKS_URL: process.env.SUPABASE_JWKS_URL!,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'sk_test_dummy',
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_dummy',
+  WEB_BASE_URL: process.env.WEB_BASE_URL || 'http://localhost:3000'
+};
 
 const app = express();
 
@@ -19,33 +38,126 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 app.use(cors());
 
-const env = loadEnv();
 const supa = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
 app.get("/health", (_req: Request, res: Response) => res.json({ ok: true }));
 
-// Minimal bootstrap tenant endpoint (one-time)
+// Serve setup page
+app.get("/setup", (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../../../public/setup.html"));
+});
+
+// Enhanced bootstrap tenant endpoint
 app.post("/tenants/bootstrap", async (req: Request, res: Response) => {
   try {
     const body = z.object({
-      userId: z.string().uuid(),
+      userId: z.string().uuid().optional(),
       email: z.string().email(),
-      tenantName: z.string().min(2)
+      tenantName: z.string().min(2),
+      password: z.string().min(6).optional()
     }).parse(req.body);
 
+    let userId = body.userId;
+
+    // If no userId provided, try to find or create the user in Supabase Auth
+    if (!userId) {
+      // First check if user already exists in auth.users
+      const { data: existingUser, error: lookupError } = await supa.auth.admin.listUsers();
+      
+      let foundUser = existingUser?.users?.find(u => u.email === body.email);
+      
+      if (foundUser) {
+        userId = foundUser.id;
+        console.log(`Found existing user: ${userId}`);
+      } else if (body.password) {
+        // Create new user in Supabase Auth
+        const { data: newUser, error: createError } = await supa.auth.admin.createUser({
+          email: body.email,
+          password: body.password,
+          email_confirm: true
+        });
+        
+        if (createError) {
+          console.error("Error creating user:", createError);
+          return res.status(400).json({ error: `Failed to create user: ${createError.message}` });
+        }
+        
+        userId = newUser.user?.id;
+        console.log(`Created new user: ${userId}`);
+      } else {
+        return res.status(400).json({ 
+          error: "User not found and no password provided for user creation" 
+        });
+      }
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: "Unable to determine user ID" });
+    }
+
     // create user row if missing
-    await supa.from("users").upsert({ id: body.userId, email: body.email });
+    const { error: userError } = await supa.from("users").upsert({ 
+      id: userId, 
+      email: body.email 
+    });
+    
+    if (userError) {
+      console.error("Error creating user record:", userError);
+      return res.status(500).json({ error: `Failed to create user record: ${userError.message}` });
+    }
+
+    // Check if user already has a tenant
+    const { data: existingProfile } = await supa.from("profiles")
+      .select("default_tenant_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (existingProfile?.default_tenant_id) {
+      return res.json({ 
+        tenantId: existingProfile.default_tenant_id, 
+        message: "User already has a tenant",
+        userId: userId
+      });
+    }
 
     // create tenant
-    const { data: t, error: terr } = await supa.from("tenants").insert({ name: body.tenantName }).select().single();
-    if (terr) return res.status(500).json({ error: terr.message });
+    const { data: t, error: terr } = await supa.from("tenants")
+      .insert({ name: body.tenantName })
+      .select()
+      .single();
+      
+    if (terr) {
+      console.error("Error creating tenant:", terr);
+      return res.status(500).json({ error: `Failed to create tenant: ${terr.message}` });
+    }
 
-    await supa.from("tenant_members").insert({ tenant_id: t!.id, user_id: body.userId, role: "OWNER" });
-    await supa.from("profiles").upsert({ user_id: body.userId, default_tenant_id: t!.id });
+    // Add user as tenant member
+    const { error: memberError } = await supa.from("tenant_members")
+      .insert({ tenant_id: t!.id, user_id: userId, role: "OWNER" });
+      
+    if (memberError) {
+      console.error("Error adding tenant member:", memberError);
+      return res.status(500).json({ error: `Failed to add tenant member: ${memberError.message}` });
+    }
 
-    res.json({ tenantId: t!.id });
+    // Create or update profile
+    const { error: profileError } = await supa.from("profiles")
+      .upsert({ user_id: userId, default_tenant_id: t!.id });
+      
+    if (profileError) {
+      console.error("Error creating profile:", profileError);
+      return res.status(500).json({ error: `Failed to create profile: ${profileError.message}` });
+    }
+
+    res.json({ 
+      tenantId: t!.id, 
+      message: "Tenant bootstrapped successfully",
+      userId: userId,
+      email: body.email
+    });
   } catch (e: any) {
+    console.error("Bootstrap error:", e);
     res.status(400).json({ error: e?.message || "bad_request" });
   }
 });

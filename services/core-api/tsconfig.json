@@ -3,8 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "module": "ESNext",
     "moduleResolution": "Node",
     "baseUrl": ".",
+    "allowSyntheticDefaultImports": true,
     "paths": {
       "@eva/types": ["../../packages/types/src"]
     }
