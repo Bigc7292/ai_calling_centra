@@ -1,0 +1,237 @@
+Auto-Tagging Logic (Gemini Prompt Template):
+"Given transcript: [TRANSCRIPT]. Context: [TAGS]. Analyze: 1. Interest level (hot/cold)? 2. DNC intent (phrases like 'stop calling')? 3. Sentiment (1-10). 4. Objections (array). Output strict JSON: {status: 'hot', tags: {sentiment: 8, objections: ['price']}, risks: []}."
+DNC Handling (Layered):
+
+Pre-Dial: Cron job queries external API (e.g., https://api.donotcall.gov/scrub?phones=...); Cache in Redis (TTL 24h).
+Runtime: Real-time Gemini interrupt ("Do not call" → Hangup + UPDATE status='dnc'; INSERT audit_log).
+Audit: Every DNC flag emits Polygon event; Queryable via Etherscan-like dashboard view.
+
+Scalability & Purging: Horizontal sharding (user_id modulo 10 tables?); GDPR purge: DELETE WHERE updated_at < NOW() - INTERVAL '90 days' AND status='cold'; (user-triggered).
+text---
+
+## Section 4: Blockchain-Enabled Data Privacy
+**Suggested Filename:** `prd_section4_blockchain_privacy.md`
+
+```markdown
+## 4. Blockchain-Enabled Data Privacy
+
+### Scope & Rationale (Deepened)
+- **PII Scope:** Strict to identifiers (name, phone, email, IP-derived geo); Operational data (transcripts, audio) off-chain, encrypted (AES-256-GCM), access-logged.
+- **Rationale:** Enables "data sovereignty" – clients query their Polygon logs independently; ZK-SNARKs for proving compliance (e.g., "X calls scrubbed") without data reveal. Cost: <$0.02/tx avg; Throughput: 65k TPS on Polygon.
+
+### Implementation Flow (Step-by-Step with Client/Server Split)
+1. **Wallet Generation (`/signup` Client-Side):**
+   - Use `ethers.Wallet.createRandom()`; Display mnemonic in secure modal (copy/QR); Optional: Hardware wallet connect (WalletConnect v2).
+   - Store: LocalStorage (encrypted via Web Crypto API) – Never to server.
+2. **PII Ingestion & Hashing (Upload Handler):**
+   - JS: `const hash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`${name}|${phone}|${email}`));` – Salt with user wallet nonce.
+   - Batch: For CSV, map over rows → Sign tx envelope → Batch submit (Polygon multicall).
+3. **Smart Contract (Full Solidity with ZK Teaser):**
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract AICallingAudit is Ownable, ReentrancyGuard {
+    struct PIIHashLog {
+        bytes32 hash;  // Keccak256(PII + salt)
+        address userWallet;
+        uint256 timestamp;
+        string action;  // "insert", "update", "dnc_flag", "erase"
+        bytes32 zkProof;  // Future: SNARK for verifiable compute
+        bool isErased;  // GDPR toggle
+    }
+
+    mapping(address => PIIHashLog[]) public logs;
+    mapping(bytes32 => bool) public hashExists;  // Prevent duplicates
+
+    event PIILogged(address indexed user, bytes32 indexed hash, string action, bytes32 zkProof);
+    event DataErased(address indexed user, bytes32 indexed hash);
+
+    modifier onlyUser(address _user) {
+        require(msg.sender == _user, "Unauthorized");
+        _;
+    }
+
+    function logPII(bytes32 _hash, string calldata _action, bytes32 _zkProof)
+        external
+        nonReentrant
+        onlyUser(msg.sender)
+    {
+        require(!hashExists[_hash], "Hash already logged");
+        hashExists[_hash] = true;
+        logs[msg.sender].push(PIIHashLog(_hash, msg.sender, block.timestamp, _action, _zkProof, false));
+        emit PIILogged(msg.sender, _hash, _action, _zkProof);
+    }
+
+    function erasePII(bytes32 _hash) external onlyUser(msg.sender) {
+        for (uint i = 0; i < logs[msg.sender].length; i++) {
+            if (logs[msg.sender][i].hash == _hash) {
+                logs[msg.sender][i].isErased = true;
+                emit DataErased(msg.sender, _hash);
+                return;
+            }
+        }
+    }
+
+    // View: Paginated logs for client dashboard
+    function getLogs(address _user, uint256 _from, uint256 _limit)
+        external
+        view
+        returns (PIIHashLog[] memory)
+    {
+        PIIHashLog[] memory userLogs = logs[_user];
+        uint256 end = _from + _limit > userLogs.length ? userLogs.length : _from + _limit;
+        PIIHashLog[] memory paginated = new PIIHashLog<a href="end - _from" target="_blank" rel="noopener noreferrer nofollow"></a>;
+        for (uint i = _from; i < end; i++) {
+            paginated[i - _from] = userLogs[i];
+        }
+        return paginated;
+    }
+
+    // Admin: Emergency pause (for exploits)
+    bool public paused;
+    function togglePause() external onlyOwner { paused = !paused; }
+}
+
+Deployment: Hardhat script for Mumbai → Mainnet; Verify on PolygonScan.
+Storage Hybrid: Supabase: Encrypted ciphertext + hash ref; Client decrypts via wallet-derived key (PBKDF2).
+ZK Extension (v1.4 Teaser): Integrate Semaphore for anonymous DNC proofs – "Prove I scrubbed without showing list".
+
+Gemini Integration Prompt Addendum: "Enhance with ZK: Generate client-side proof gen using snarkjs. On logPII, include _zkProof param. Ensure all hashing uses wallet nonce for replay protection. Test: Simulate 100 PII inserts."
+Compliance Edge: Art. 17 Erasure: Contract call + Supabase nuke; Audit API: "Query logs for user X, filter erased=false".
+text---
+
+## Section 5: Technical Architecture & Stack
+**Suggested Filename:** `prd_section5_tech_stack.md`
+
+```markdown
+## 5. Technical Architecture & Stack
+
+### High-Level Diagram (Enhanced Text + Mermaid for Gemini)
+graph TD
+A[User Browser - Next.js PWA] --> B[API Gateway - Express.js]
+B --> C[Supabase Cluster - Postgres/Edge Fns/Auth]
+B --> D[VAPI Orchestrator - Voice I/O]
+C --> E[Stripe Sync - Billing Webhooks]
+D --> F[Gemini Pro - Analysis/Fine-Tune]
+B --> G[Polygon Node - Web3 Provider]
+G --> H[Audit Contract - Immutable Logs]
+I[GCP Cloud Run - Serverless Deploy] --> B
+I --> J[Cloud SQL - Supabase Replica]
+K[Redis Cache - Sessions/Queues] --> B
+L[Sentry/Datadog - Monitoring] --> I
+text*(Gemini Prompt: "Render this Mermaid diagram as SVG for docs.")*
+
+### Detailed Stack (with Versions & Patterns)
+- **Frontend:** Next.js 14.2 (App Router, Turbopack dev); TypeScript 5.5; Tailwind 3.4; Zustand 4.5 (persist middleware); React Flow 12 for editor; PWA via next-pwa.
+- **Backend:** Express 4.19 (TS via @types/express); ESM native; Middleware: Helmet (security), Rate-Limiter-Flexible (100 req/min), CORS (origin whitelist).
+- **Database/Auth:** Supabase 2.0 (Postgres 15; RLS policies; JWT with 1h expiry + refresh); Edge Functions (Deno) for webhooks.
+- **Voice Layer:** VAPI 1.1 (REST for outbound, WebSockets for realtime; Custom models via SSML); Fallback: ElevenLabs for TTS if VAPI down.
+- **Payments:** Stripe 2025-09-01 API (Metered billing: $0.04/min base + $0.01/min premium voices); Webhooks: `invoice.paid` → Credit quota.
+- **AI/ML:** Gemini 1.5 Pro/Flash (CLI for local dev; API rate: 60 RPM); Fine-tuning: 100-domain transcripts; Drift detect: Weekly perplexity score.
+- **Blockchain:** ethers 6.13 (Wallet connect); Polygon RPC (Alchemy provider); Multicall3 for batch.
+- **Infra:** GCP Cloud Run (CPU 1 vCPU, 512MiB mem; Auto-scale 0-1000); Artifact Registry; Secret Manager for keys.
+- **DevOps:** GitHub Actions CI/CD (lint/test/deploy); ESLint + Prettier; Vitest for unit (90% coverage).
+
+**Security Patterns:**
+- Auth: Supabase JWT + Row-Level everywhere; CSRF via double-submit cookies.
+- Encryption: At-rest (Supabase); In-transit (TLS 1.3); PII zero-trust (client-only decrypt).
+- OWASP: Input sanitization (zod schemas); SQL inj via prepared stmts.
+
+**Error Handling (Resilience Framework):**
+- Global: Try-catch → Sentry capture → User toast (categorize: 4xx user-error, 5xx retry).
+- VAPI Fail: Exponential backoff (3x, 1-5s); Fallback: SMS via Twilio ("Call rescheduled – reply STOP").
+- DB Deadlock: Retry with pg-advisory-lock.
+
+Section 6: Integrations & APIs
+Suggested Filename: prd_section6_integrations.md
+markdown## 6. Integrations & APIs
+
+### API Spec (OpenAPI Snippet for Gemini)
+```yaml
+openapi: 3.0.0
+info: {title: AI Calling Center API, version: 1.0}
+paths:
+  /contacts:
+    post:
+      summary: Ingest leads with hashing
+      requestBody:
+        content:
+          application/json: {schema: {$ref: '#/components/schemas/LeadBatch'}}
+      responses:
+        201: {description: Hashes logged, contacts created}
+  /campaigns/{id}/start:
+    post:
+      summary: Launch dialer
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses:
+        202: {description: Queued for VAPI}
+components:
+  schemas:
+    LeadBatch:
+      type: object
+      properties:
+        leads: {type: array, items: {type: object, properties: {phone: {type: string}, name: {type: string}, email: {type: string}}}}
+        walletSignature: {type: string}  # For auth
+
+Social Sync: X Webhook (via xAI API? Query: "brand mentions" → Semantic filter >0.7 → Enqueue dial); OAuth for user auth.
+CRM: Zapier/Zoho: Triggers on "new booking" → Push to Salesforce (Opportunity create).
+Compliance: TNS DNC API (daily scrub); TCPA: Consent log in metadata (e.g., {"consented_at": ISO, "method": "verbal"}).
+
+text---
+
+## Section 7: Roadmap & Milestones
+**Suggested Filename:** `prd_section7_roadmap.md`
+
+```markdown
+## 7. Roadmap & Milestones
+
+### Phased Breakdown (Agile Sprints – 2-Week Cycles)
+- **Phase 1: MVP Core (Now – Oct 15, 2025; Sprints 1-4)**
+  - Sprint 1: Signup + Wallet (Test: 100% hash success).
+  - Sprint 2: VAPI Endpoints + Basic Schema (E2E: Call → Tag).
+  - Sprint 3: Lead Upload + Quick Campaign.
+  - Sprint 4: Stripe + Quota Enforcement.
+  - Gate: 50 beta testers; 95% onboarding success.
+
+- **Phase 2: Enhanced Features (Oct 16 – Nov 30, 2025; Sprints 5-10)**
+  - Sprint 5-6: Dashboard UI + Recharts Analytics.
+  - Sprint 7: Script Editor + Gemini Assist.
+  - Sprint 8: Blockchain Full Flow (Testnet audits).
+  - Sprint 9: Inbound Webhooks + Escalations.
+  - Sprint 10: A/B Testing + Insights Reports.
+  - Gate: 1,000 users; 85% conversion KPI hit.
+
+- **Phase 3: Scale & Ecosystem (Dec 2025 – Mar 2026; Sprints 11-18)**
+  - Sprint 11-12: Social/X Integrations + Mobile PWA Polish.
+  - Sprint 13: ZK Proofs + Enterprise Multi-Tenant.
+  - Sprint 14: Perf Tuning (Load test 5k calls).
+  - Sprint 15-16: Compliance Dashboard + Exports.
+  - Sprint 17-18: React Native App + Global Launch.
+  - Gate: Prod GCP migrate; $100K MRR.
+
+**Dependencies & Contingencies:** VAPI keys (backup: Deepgram); Gemini quota (fallback: OpenAI Whisper). Budget: $75K dev (4 months @ $40/hr); $15K/mo infra (scale-adjusted). Quarterly review: Pivot if <70% KPIs.
+
+Appendix: Google Gemini CLI Context Prompt
+Suggested Filename: prd_gemini_prompt.md
+markdown# Google Gemini CLI Context Prompt
+
+Copy-paste this entire block into Gemini CLI as your base context. Use follow-up prompts like: "Using PRD v1.3 Sec 2.3, generate React Flow script editor component with Gemini API hooks" or "Audit the Solidity contract in Sec 4 for reentrancy vulns and fix."
+[PRD CONTEXT START]
+You are a senior full-stack engineer + Solidity dev building the AI Calling Center per this ultra-detailed PRD (v1.3, Sept 19, 2025). Emphasize security (zero-trust PII), performance (<2s latencies), and modularity (one file/feature per gen). Rules:
+
+Blockchain: Client-side only – ethers.js for signing; Emit to Polygon Audit contract (full code in Sec 4); Add ZK placeholders.
+Supabase: RLS everywhere; Edge Fns for async (e.g., transcript analysis).
+VAPI: Webhook-first; Handle realtime via Socket.io.
+Errors: Zod validation + exponential retry; Log to Sentry.
+Tests: Vitest for 90% coverage; Include in outputs.
+UX: Mobile-first Tailwind; A11y ARIA.
+
+Full PRD (Expanded v1.3):
+[Paste the entire PRD above here – Sections 1-7 verbatim, including schemas/code]
+Current Status: 35% – VAPI webhook live; Next: Dashboard stats cards.
+Tech Stack Reminders: Next.js 14.2 TS; Express TS ESM; GCP Cloud Run; No server blockchain keys – client verifies sigs.
+[PRD CONTEXT END]
+Now, generate [SPECIFIC TASK, e.g., Express.js /contacts POST endpoint from Sec 6 API spec, with hashing verification].

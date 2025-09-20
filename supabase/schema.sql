@@ -28,6 +28,10 @@ create table public.profiles (
   created_at timestamp with time zone default now()
 );
 
+-- Enum for contact statuses
+create type app.contact_status as enum ('hot', 'cold', 'dnc', 'booked', 'escalated');
+
+-- Main contacts table
 create table app.contacts (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid references app.tenants(id),
@@ -35,7 +39,26 @@ create table app.contacts (
   phone text not null,
   email text,
   created_at timestamp with time zone default now()
+  tenant_id uuid references app.tenants(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete cascade,
+  phone text not null check (phone ~ '^\+[1-9]\d{1,14}$'), -- E.164 strict
+  name_hash text, -- Keccak256 from client-side
+  email_hash text,
+  status app.contact_status default 'cold',
+  tags jsonb default '{}'::jsonb, -- e.g., {"industry": "real_estate", "sentiment": 8}
+  metadata jsonb, -- e.g., {"source": "twitter", "ip_geo": "NYC"}
+  call_logs jsonb[] default '{}', -- [{ts: ISO, duration: 120, outcome: "booked", assistant_id: "gemini-1.5"}]
+  transcript text, -- Encrypted via pg_crypto (client key)
+  recording_url text, -- GCS signed URL with 7d TTL
+  dnc_scrubbed_at timestamp,
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
+
+-- Performance indexes
+create index concurrently idx_contacts_tenant_status on app.contacts(tenant_id, status);
+create index concurrently idx_contacts_phone_hash on app.contacts(phone, name_hash);
+create index concurrently idx_contacts_tags_gin on app.contacts using gin(tags);
 
 create table app.subscriptions (
   id text primary key, -- Stripe Subscription ID
@@ -69,6 +92,27 @@ begin
   return exists(select 1 from app.tenant_members where tenant_id = is_member.tenant_id and user_id = auth.uid());
 end;
 $$;
+
+-- Edge Function Trigger: Auto-tag post-insert (triggered by VAPI webhook)
+create or replace function app.analyze_transcript()
+returns trigger as $$
+begin
+  -- This is a placeholder for an async call to a Supabase Edge Function
+  -- The Edge Function will then call the Gemini API for analysis.
+  -- The actual HTTP call should not be in a trigger for performance reasons.
+  -- For now, we'll just log that it's been triggered.
+  -- Example of what the edge function would do:
+  -- PERFORM net.http_post(
+  --   url := 'YOUR_EDGE_FUNCTION_URL/analyze-transcript',
+  --   body := jsonb_build_object('contact_id', NEW.id, 'transcript', NEW.transcript)
+  -- );
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trig_analyze_after_insert
+after insert or update of transcript on app.contacts
+for each row execute function app.analyze_transcript();
 
 -- Enable RLS on tables
 alter table app.tenants enable row level security;
@@ -117,8 +161,19 @@ with check (auth.uid() = user_id);
 
 -- Policies for app.contacts
 create policy "Contacts can be viewed by tenant members"
+-- Policies for app.contacts (combining user and tenant access)
+create policy "Users can manage their own contacts within a tenant"
+on app.contacts for all
+using (public.is_member(tenant_id) and auth.uid() = user_id)
+with check (public.is_member(tenant_id) and auth.uid() = user_id);
+
+create policy "Admins and Owners can view all contacts in their tenant"
 on app.contacts for select
 using (public.is_member(tenant_id));
+using (
+  public.is_member(tenant_id) and
+  (select role from app.tenant_members where user_id = auth.uid() and tenant_id = app.contacts.tenant_id) in ('ADMIN', 'OWNER')
+);
 
 create policy "Contacts can be inserted by tenant members"
 on app.contacts for insert

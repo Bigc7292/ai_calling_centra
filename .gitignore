@@ -4,25 +4,40 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/node_modules
+/.pnp
+.pnp.js
 
 # Build outputs
 dist/
 build/
 .next/
 out/
+# NPM cache and logs
+/.npm
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
 
 # Environment variables (NEVER commit these!)
+# Build output
+/dist
+/build
+
+# Environment variables
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 .env.production
+.env.*.local
 
 # Supabase MCP configuration with tokens
 mcp-config.json
 
 # OS generated files
+# IDE and OS files
 .DS_Store
 .DS_Store?
 ._*

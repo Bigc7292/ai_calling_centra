@@ -1,0 +1,14 @@
+require("@nomicfoundation/hardhat-toolbox");
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: "0.8.24",
+  paths: {
+    sources: "./",
+    artifacts: "./artifacts",
+  },
+  typechain: {
+    outDir: "typechain",
+    target: "ethers-v5",
+  },
+};

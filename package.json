@@ -11,11 +11,34 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@openzeppelin/contracts": "4.9.3",
     "@postgrestools/postgrestools": "^0.13.0",
-    "@types/node": "^24.3.1"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "@types/papaparse": "^5.3.16",
+    "@types/pg": "^8.15.5",
+    "hardhat": "2.26.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "dependencies": {
-    "dotenv": "^17.2.2"
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.57.4",
+    "bullmq": "^5.58.6",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "ethers": "^5.8.0",
+    "express": "^4.21.2",
+    "ioredis": "^5.7.0",
+    "jose": "^5.10.0",
+    "papaparse": "^5.5.3",
+    "pg": "^8.16.3",
+    "reactflow": "^11.11.4",
+    "stripe": "^14.25.0",
+    "zod": "^3.25.76",
+    "zod-validation-error": "^4.0.2"
   }
 }

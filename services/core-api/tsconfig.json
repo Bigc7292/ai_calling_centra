@@ -2,16 +2,20 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
     "module": "ESNext",
     "moduleResolution": "Node",
-    "baseUrl": ".",
+    "baseUrl": "../..",
     "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "strict": false,
     "paths": {
-      "@eva/types": ["../../packages/types/src"]
+      "@/lib/*": ["lib/*"],
+      "@/worker/*": ["worker/*"],
+      "@/contracts/*": ["contracts/*"],
+      "@eva/types": ["packages/types/src"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../lib", "../../worker", "../../contracts"],
   "references": [
     { "path": "../../packages/types" }
   ]
