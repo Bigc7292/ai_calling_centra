@@ -7,8 +7,8 @@ This document provides a comprehensive status update for the AI Calling Center p
 ✅ **Project is fully operational**
 
 ### Services
-- **Frontend**: Running on http://localhost:3010
-- **Backend API**: Running on http://localhost:3001
+- **Frontend**: Running on http://localhost:3010 (from `apps/frontend/` directory)
+- **Backend API**: Running on http://localhost:3001 (from `services/core-api/` directory)
 - **Database**: Supabase PostgreSQL with RLS policies
 - **Authentication**: Supabase Auth with JWT
 
@@ -74,6 +74,9 @@ This document provides a comprehensive status update for the AI Calling Center p
 1. Access the application at http://localhost:3010
 2. Log in with credentials for `drivendatadynamics@gmail.com`
 3. Test core functionality (signup, campaigns, analytics)
+
+### Running Services
+For detailed instructions on running frontend and backend services from their respective directories, see [RUNNING_SERVICES.md](RUNNING_SERVICES.md).
 
 ### Production Deployment
 1. Configure production environment variables
