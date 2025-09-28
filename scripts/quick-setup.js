@@ -18,16 +18,10 @@ async function quickSetup() {
   console.log('');
 
   try {
-    const response = await fetch('http://localhost:3001/tenants/bootstrap', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email,
-        tenantName: tenantName,
-        password: password
-      })
+    const response = await fetch('http://localhost:3009/tenants/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId })
     });
 
     const result = await response.json();
@@ -48,7 +42,7 @@ async function quickSetup() {
       console.log(`Error: ${result.error}`);
       console.log('');
       console.log('💡 Make sure:');
-      console.log('1. The API server is running on http://localhost:3001');
+      console.log('1. The API server is running on http://localhost:3007');
       console.log('2. Your Supabase environment variables are configured');
       console.log('3. The Supabase schema has been applied');
     }
@@ -58,7 +52,7 @@ async function quickSetup() {
     console.log('');
     console.log('💡 Make sure:');
     console.log('1. Run "pnpm dev:all" to start the servers');
-    console.log('2. Check that the API is running on http://localhost:3001');
+    console.log('2. Check that the API is running on http://localhost:3007');
   }
 }
 

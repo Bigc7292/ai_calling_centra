@@ -2,7 +2,7 @@
   "name": "eva_eva",
   "private": true,
   "scripts": {
-    "dev:all": "npm run dev --workspace=@eva/frontend --workspace=@eva/core-api --parallel",
+    "dev:all": "pnpm -r --parallel dev",
     "build": "pnpm -r build"
   },
   "workspaces": [
@@ -13,6 +13,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "4.9.3",
+    "@playwright/test": "^1.55.0",
     "@postgrestools/postgrestools": "^0.13.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
