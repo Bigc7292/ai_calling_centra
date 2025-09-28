@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/apiFetch";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import dynamic from 'next/dynamic';
 // Temporarily use local interfaces for build
 interface DailyMetric {
@@ -68,6 +68,9 @@ interface GeoMeetingRow {
 
 const DayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+// Colors for pie charts
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
 export default function DashboardPage() {
   const [dailyData, setDailyData] = useState<DailyMetric[]>([]);
   const [campaignKpis, setCampaignKpis] = useState<CampaignKpi[]>([]);
@@ -106,6 +109,22 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  // Prepare data for pie charts
+  const campaignMeetingsData = campaignKpis.map(campaign => ({
+    name: campaign.name,
+    value: campaign.meetings
+  }));
+
+  const assistantMeetingsData = assistantKpis.map(assistant => ({
+    name: assistant.name,
+    value: assistant.meetings
+  }));
+
+  const agentMeetingsData = agentKpis.map(agent => ({
+    name: agent.agent,
+    value: agent.meetings
+  }));
+
   const costPerMeetingData = dailyData.map(d => ({
     day: d.day,
     cost_per_meeting: d.meetings > 0 ? (d.cost_total / d.meetings).toFixed(2) : 0,
@@ -126,6 +145,37 @@ export default function DashboardPage() {
         <div>Loading dashboard data...</div>
       ) : (
         <>
+          {/* Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <h3>Total Calls</h3>
+              <p style={{ fontSize: '2rem', margin: '10px 0 0' }}>
+                {dailyData.reduce((sum, day) => sum + day.calls_out, 0)}
+              </p>
+            </div>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <h3>Total Meetings</h3>
+              <p style={{ fontSize: '2rem', margin: '10px 0 0' }}>
+                {dailyData.reduce((sum, day) => sum + day.meetings, 0)}
+              </p>
+            </div>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <h3>Answer Rate</h3>
+              <p style={{ fontSize: '2rem', margin: '10px 0 0' }}>
+                {dailyData.reduce((sum, day) => sum + day.calls_out, 0) > 0 
+                  ? ((dailyData.reduce((sum, day) => sum + day.answered, 0) / dailyData.reduce((sum, day) => sum + day.calls_out, 0)) * 100).toFixed(1) 
+                  : '0'}%
+              </p>
+            </div>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <h3>Total Cost</h3>
+              <p style={{ fontSize: '2rem', margin: '10px 0 0' }}>
+                ${dailyData.reduce((sum, day) => sum + day.cost_total, 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* Charts Section */}
           <div className="card" style={{ marginBottom: 20 }}>
             <h2>Daily Activity</h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -142,20 +192,97 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
 
-          <div className="card" style={{ marginBottom: 20 }}>
-            <h2>Cost per Meeting (USD)</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={costPerMeetingData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="cost_per_meeting" stroke="#ff7300" name="Cost per Meeting" />
-              </LineChart>
-            </ResponsiveContainer>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: 20 }}>
+            <div className="card">
+              <h2>Cost per Meeting (USD)</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={costPerMeetingData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="day" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="cost_per_meeting" stroke="#ff7300" name="Cost per Meeting" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="card">
+              <h2>Meetings by Campaign</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={campaignMeetingsData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {campaignMeetingsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: 20 }}>
+            <div className="card">
+              <h2>Meetings by Assistant</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={assistantMeetingsData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {assistantMeetingsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="card">
+              <h2>Meetings by Agent</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={agentMeetingsData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {agentMeetingsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Tables Section */}
           <div className="card" style={{ marginBottom: 20 }}>
             <h2>Campaign KPIs</h2>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>

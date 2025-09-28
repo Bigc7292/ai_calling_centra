@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables
 const env = {
-  PORT: Number(process.env.PORT) || 4000,
+  PORT: Number(process.env.PORT) || 3001,
   SUPABASE_URL: process.env.SUPABASE_URL!,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
   SUPABASE_JWKS_URL: process.env.SUPABASE_JWKS_URL!,

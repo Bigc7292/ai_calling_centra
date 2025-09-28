@@ -7,6 +7,8 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+console.log("Supabase URL being used:", supabaseUrl);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface AuthContextType {
@@ -39,20 +41,36 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const handleSignIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log("Attempting to sign in with:", { email, supabaseUrl });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      alert(error.message);
+      console.error("Sign in error:", error);
+      alert(`Sign in error: ${error.message}`);
     } else {
+      console.log("Sign in successful:", data);
       router.push("/");
     }
   };
 
   const handleSignUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    console.log("Attempting to sign up with:", { email, supabaseUrl });
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: 'http://localhost:3000'
+      }
+    });
     if (error) {
-      alert(error.message);
+      console.error("Sign up error:", error);
+      alert(`Sign up error: ${error.message}`);
     } else {
-      alert("Check your email for the confirmation link!");
+      console.log("Sign up successful:", data);
+      if (data.user?.identities?.length === 0) {
+        alert("This email is already registered. Please sign in instead.");
+      } else {
+        alert("Account created successfully! You can now sign in.");
+      }
     }
   };
 
@@ -100,6 +118,12 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
             Sign Up
           </button>
         </form>
+        <div style={{ marginTop: 20, fontSize: '0.8em', color: '#666' }}>
+          <p>Having trouble signing in?</p>
+          <p>1. Check that email confirmation is disabled in Supabase Auth settings</p>
+          <p>2. Make sure you're using the correct email and password</p>
+          <p>3. Clear your browser cache and try again</p>
+        </div>
       </div>
     );
   }

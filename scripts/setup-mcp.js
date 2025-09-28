@@ -15,7 +15,7 @@ console.log('==========================================');
 console.log('');
 
 // Check if .env file exists
-const envPath = path.join(__dirname, '.env');
+const envPath = path.join(__dirname, '..', '.env');
 if (!fs.existsSync(envPath)) {
   console.log('❌ Missing .env file');
   console.log('Please create a .env file based on .env.example with your Supabase credentials');
