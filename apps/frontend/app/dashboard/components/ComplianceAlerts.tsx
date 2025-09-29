@@ -4,11 +4,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "../../components/AuthProvider";
+import { useAuth } from "../../../components/AuthProvider";
 import { io } from "socket.io-client";
 
 export default function ComplianceAlerts() {
-  const { session, user } = useAuth();
+  const { session } = useAuth();
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
@@ -19,14 +19,20 @@ export default function ComplianceAlerts() {
     if(session) fetchAlerts();
 
     const socket = io(process.env.NEXT_PUBLIC_WEBSOCKET_URL);
-    socket.on("compliance_alert", (data) => {
-      if (data.userId === user.id) {
+    const handleComplianceAlert = (data) => {
+      // Get user ID from session
+      const userId = session?.user?.id;
+      if (data.userId === userId) {
         setAlerts(prev => [data, ...prev]);
       }
-    });
+    };
+    socket.on("compliance_alert", handleComplianceAlert);
 
-    return () => socket.disconnect();
-  }, [session, user]);
+    return () => {
+      socket.off("compliance_alert", handleComplianceAlert);
+      socket.disconnect();
+    };
+  }, [session]);
 
   return (
     <div>

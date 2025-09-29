@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip } from 'recharts';
-import { useAuth } from "../../components/AuthProvider";
+import { useAuth } from "../../../components/AuthProvider";
 import { mapToHeatmapData } from "../../../lib/chart-data-mapper";
 
 export default function HeatmapChartComponent() {

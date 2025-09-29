@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { FunnelChart, Funnel, Tooltip, LabelList } from 'recharts';
-import { useAuth } from "../../components/AuthProvider";
+import { useAuth } from "../../../components/AuthProvider";
 import { mapToFunnelData } from "../../../lib/chart-data-mapper";
 
 export default function FunnelChartComponent() {
