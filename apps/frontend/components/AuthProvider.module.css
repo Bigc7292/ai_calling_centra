@@ -1,0 +1,27 @@
+.card {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 16px;
+}
+
+.title {
+  margin-top: 0;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.help {
+  margin-top: 20px;
+  font-size: 0.8em;
+  color: #666;
+}

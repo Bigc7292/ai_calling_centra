@@ -1,15 +1,23 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
+import styles from "./AuthProvider.module.css";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-console.log("Supabase URL being used:", supabaseUrl);
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Better to warn loudly in dev so it's obvious when env is misconfigured
+  console.error(
+    "Missing Supabase environment variables. Make sure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set."
+  );
+} else {
+  console.log("Supabase URL being used:", supabaseUrl);
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "");
 
 interface AuthContextType {
   session: any;
@@ -23,6 +31,7 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -54,8 +63,8 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
 
   const handleSignUp = async (email: string, password: string) => {
     console.log("Attempting to sign up with:", { email, supabaseUrl });
-    const { data, error } = await supabase.auth.signUp({ 
-      email, 
+    const { data, error } = await supabase.auth.signUp({
+      email,
       password,
       options: {
         emailRedirectTo: 'http://localhost:3000'
@@ -90,9 +99,10 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
 
   if (!session) {
     return (
-      <div style={{ maxWidth: 400, margin: "100px auto", padding: 16 }} className="card">
-        <h1 style={{ marginTop: 0 }}>Sign In / Sign Up</h1>
+      <div className={styles.card + " card"}>
+        <h1 className={styles.title}>Sign In / Sign Up</h1>
         <form
+          ref={formRef}
           onSubmit={async (e) => {
             e.preventDefault();
             const form = e.target as HTMLFormElement;
@@ -100,16 +110,17 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
             const password = (form.elements.namedItem("password") as HTMLInputElement).value;
             await handleSignIn(email, password);
           }}
-          style={{ display: "flex", flexDirection: "column", gap: 10 }}
+          className={styles.form}
         >
-          <input type="email" name="email" placeholder="Email" required style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc" }} />
-          <input type="password" name="password" placeholder="Password" required style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc" }} />
+          <input type="email" name="email" placeholder="Email" required className={styles.input} />
+          <input type="password" name="password" placeholder="Password" required className={styles.input} />
           <button type="submit" className="btn">Sign In</button>
           <button
             type="button"
             className="btn-outline"
             onClick={async () => {
-              const form = document.querySelector("form") as HTMLFormElement;
+              const form = formRef.current;
+              if (!form) return alert('Form not found');
               const email = (form.elements.namedItem("email") as HTMLInputElement).value;
               const password = (form.elements.namedItem("password") as HTMLInputElement).value;
               await handleSignUp(email, password);
@@ -118,7 +129,7 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
             Sign Up
           </button>
         </form>
-        <div style={{ marginTop: 20, fontSize: '0.8em', color: '#666' }}>
+  <div className={styles.help}>
           <p>Having trouble signing in?</p>
           <p>1. Check that email confirmation is disabled in Supabase Auth settings</p>
           <p>2. Make sure you're using the correct email and password</p>

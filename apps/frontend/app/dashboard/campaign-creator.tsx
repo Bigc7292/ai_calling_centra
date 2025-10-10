@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useAuth } from "../../../components/AuthProvider";
+import { useAuth } from "../../components/AuthProvider";
 
 export default function CampaignCreator({ leads }) {
   const { register, handleSubmit, setValue, watch } = useForm();

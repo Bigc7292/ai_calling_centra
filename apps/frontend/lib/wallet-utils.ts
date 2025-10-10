@@ -18,7 +18,7 @@ export const createNewWallet = (): ethers.Wallet => {
  * @see PRD Sec 4: "Client-side ethers.js hashing to Polygon Audit contract"
  */
 export const hashPII = (value: string): string => {
-  return ethers.keccak256(ethers.toUtf8Bytes(value));
+  return ethers.utils.keccak256(ethers.utils.toUtf8Bytes(value));
 };
 
 /**
@@ -93,7 +93,7 @@ export const emitBlockchainAuditStub = async (walletAddress: string, piiHash: st
   // return tx.hash;
 
   // Returning a fake hash for demonstration purposes.
-  const fakeTxHash = ethers.keccak256(ethers.toUtf8Bytes(`fake-tx-for-${piiHash}`));
+  const fakeTxHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fake-tx-for-${piiHash}`));
   console.log(`// Fake TX Hash: ${fakeTxHash}`);
   return fakeTxHash;
 };

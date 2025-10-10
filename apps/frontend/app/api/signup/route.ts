@@ -5,11 +5,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-import { SignupApiSchema } from '@/lib/zod-schemas';
+import { SignupApiSchema } from '../../../lib/zod-schemas';
 
 // Per PRD Sec 5: Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-04-10',
+  apiVersion: '2023-10-16',
 });
 
 export async function POST(request: Request) {

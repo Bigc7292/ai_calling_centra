@@ -7,10 +7,16 @@
     "start": "next start -p 3010"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@types/react-datepicker": "^7.0.0",
+    "@zxcvbn-ts/core": "^3.0.4",
+    "@zxcvbn-ts/language-common": "^3.0.4",
     "leaflet": "^1.9.4",
     "next": "^14.2.32",
+    "qrcode.react": "^4.2.0",
     "react": "18.3.1",
+    "react-confetti": "^6.4.0",
     "react-datepicker": "^8.7.0",
     "react-dom": "18.3.1",
     "react-hook-form": "^7.63.0",

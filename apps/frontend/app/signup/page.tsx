@@ -7,12 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ethers } from 'ethers';
 import { z } from 'zod';
 import Confetti from 'react-confetti';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core';
-import zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
+import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
 
-import { SignupFormSchema } from '@/lib/zod-schemas';
-import { createNewWallet, hashPII, storeEncryptedMnemonic, emitBlockchainAuditStub } from '@/lib/wallet-utils';
+import { SignupFormSchema } from '../../lib/zod-schemas';
+import { createNewWallet, hashPII, storeEncryptedMnemonic, emitBlockchainAuditStub } from '../../lib/wallet-utils';
 
 // Per PRD Sec 2.2: zxcvbn strength via lib
 const options = { dictionary: { ...zxcvbnCommonPackage.dictionary } };
@@ -90,7 +90,7 @@ export default function SignupPage() {
         console.error("Blockchain emit failed:", bcError);
         // TODO: Per PRD Sec 5 - Implement retry logic or flag for later processing
       }
-      
+
       // 6. Transition to success state
       setStep('success');
     });
@@ -145,7 +145,7 @@ export default function SignupPage() {
             {wallet?.mnemonic?.phrase}
           </div>
           <div className="flex justify-center my-4">
-            <QRCode value={wallet?.mnemonic?.phrase || ''} size={128} />
+            <QRCodeCanvas value={wallet?.mnemonic?.phrase || ''} size={128} />
           </div>
           <button
             onClick={() => navigator.clipboard.writeText(wallet?.mnemonic?.phrase || '')}
