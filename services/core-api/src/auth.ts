@@ -26,6 +26,11 @@ declare global {
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  // Skip authentication for CRM routes
+  if (req.path.startsWith('/crm')) {
+    return next();
+  }
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {

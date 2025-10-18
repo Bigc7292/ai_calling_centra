@@ -36,24 +36,29 @@ ai_calling_centra/
 │   └── frontend/          # Next.js frontend application
 │       ├── src/app/       # App Router pages
 │       ├── components/    # Reusable components
-│       └── lib/          # Utilities and client configs
+│       └── lib/           # Utilities and client configs
 ├── 🔧 services/
-│   └── core-api/         # Express.js backend API
-│       ├── src/routes/   # API route handlers
-│       └── auth.ts       # Authentication middleware
+│   └── core-api/          # Express.js backend API
+│       ├── src/routes/    # API route handlers
+│       └── auth.ts        # Authentication middleware
 ├── 📦 packages/
-│   ├── types/            # Shared TypeScript interfaces
-│   ├── config/           # Shared configuration
-│   └── ui/               # Shared UI components
+│   ├── types/             # Shared TypeScript interfaces
+│   ├── config/            # Shared configuration
+│   └── ui/                # Shared UI components
 ├── 🗄️ supabase/
-│   └── schema.sql        # Database schema and policies
+│   └── schema.sql         # Database schema and policies
 ├── 🤖 scripts/
-│   ├── quick-setup.js    # User bootstrap script
-│   └── setup-mcp.js      # MCP configuration script
+│   ├── quick-setup.js     # User bootstrap script
+│   └── setup-mcp.js       # MCP configuration script
+├── 📁 codebase_new/
+│   └── top-loader-agent-ai/ # Frappe CRM integration
+│       ├── crm/           # CRM application
+│       ├── frontend/      # CRM frontend
+│       └── docker/        # Docker configuration
 └── 🔐 Security Files
-    ├── .env.example      # Environment template
-    ├── .gitignore        # Git exclusions
-    └── mcp-config.json   # MCP client configuration
+    ├── .env.example       # Environment template
+    ├── .gitignore         # Git exclusions
+    └── mcp-config.json    # MCP client configuration
 ```
 
 ## 🚀 Quick Start
@@ -124,6 +129,25 @@ pnpm dev:all
 node scripts/quick-setup.js
 ```
 
+### 5. CRM Integration (Optional)
+
+The platform includes integration with Frappe CRM for enhanced customer relationship management:
+
+1. **Navigate to CRM directory**:
+   ```bash
+   cd codebase_new/top-loader-agent-ai
+   ```
+
+2. **Start CRM services** (when Docker issues are resolved):
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access CRM integration**:
+   - Main app navigation includes a "CRM" link
+   - API endpoints available at `/api/crm/*`
+   - See `CRM_INTEGRATION.md` for detailed documentation
+
 ### 5. Development
 
 ```bash
@@ -187,6 +211,10 @@ The core API provides:
 - `GET /analytics/agents` - Agent performance data
 - `GET /contacts` - Contact management
 - `POST /tenants/bootstrap` - User onboarding
+- `GET /crm/dashboard` - CRM dashboard information
+- `GET /crm/leads` - CRM leads data
+- `GET /crm/contacts` - CRM contacts data
+- `GET /crm/deals` - CRM deals data
 
 ### Authentication Flow
 
@@ -236,6 +264,7 @@ The core API provides:
 - **Dashboard** - Analytics visualization
 - **MeetingGeoMap** - Geographic data display
 - **Analytics Router** - API data aggregation
+- **CRM Integration** - Frappe CRM connectivity
 
 ### Database Schema
 

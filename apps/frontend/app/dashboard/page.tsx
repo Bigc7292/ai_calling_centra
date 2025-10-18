@@ -6,7 +6,10 @@
 import StatsCards from "./components/StatsCards";
 import FunnelChart from "./components/FunnelChart";
 import HeatmapChart from "./components/HeatmapChart";
-import GeoMap from "./components/GeoMap";
+import dynamic from 'next/dynamic';
+
+// Dynamically import GeoMap with SSR disabled to avoid window is not defined error
+const GeoMap = dynamic(() => import('./components/GeoMap'), { ssr: false });
 
 export default function DashboardPage() {
   return (

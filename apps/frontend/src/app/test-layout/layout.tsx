@@ -1,8 +1,8 @@
 "use client";
-import "./../styles/globals.css";
+import "./../../styles/globals.css";
 import Link from "next/link";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function TestLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
@@ -23,8 +23,8 @@ function Header() {
         <nav style={{ display: "flex", gap: 12 }}>
           <Link className="btn-outline" href="/">Home</Link>
           <Link className="btn-outline" href="/dashboard">Dashboard</Link>
-          <Link className="btn-outline" href="/contacts">Contacts</Link>
           <Link className="btn-outline" href="/crm">CRM</Link>
+          <Link className="btn-outline" href="/contacts">Contacts</Link>
           <Link className="btn-outline" href="/settings">Settings</Link>
         </nav>
       </div>

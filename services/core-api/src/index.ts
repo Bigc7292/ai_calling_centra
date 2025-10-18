@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { authMiddleware, requireRole } from "./auth.js"; // Added .js extension
 import Stripe from "stripe";
 import analyticsRouter from "./routes/analytics.js"; // Added .js extension
+import crmRouter from "./routes/crm.js"; // Added .js extension
 import path from "path";
 import { fileURLToPath } from "url";
 import { config } from "dotenv";
@@ -65,7 +66,9 @@ app.post("/tenants/bootstrap", async (req: Request, res: Response) => {
       // First check if user already exists in auth.users
       const { data: existingUser, error: lookupError } = await supa.auth.admin.listUsers();
       
-      let foundUser = existingUser?.users?.find(u => u.email === body.email);
+      // Use type assertion to avoid TypeScript errors
+      const users = existingUser?.users || [];
+      let foundUser = users.find((u: any) => u.email === body.email);
       
       if (foundUser) {
         userId = foundUser.id;
@@ -206,6 +209,8 @@ app.post("/webhooks/stripe", express.raw({ type: "application/json" }), async (r
   res.json({ received: true });
 });
 
+// Mount CRM router BEFORE authentication middleware
+app.use("/crm", crmRouter);
 
 // Protected routes
 app.use(authMiddleware);

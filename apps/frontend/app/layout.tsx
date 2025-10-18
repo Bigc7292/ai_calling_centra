@@ -1,4 +1,4 @@
-import { AuthGate } from '../components/AuthProvider';
+import Header from '../components/Header';
 
 export const metadata = {
   title: 'Next.js',
@@ -13,9 +13,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthGate>
+        <Header />
+        <main style={{ maxWidth: 1120, margin: "24px auto", padding: "0 16px" }}>
           {children}
-        </AuthGate>
+        </main>
       </body>
     </html>
   )

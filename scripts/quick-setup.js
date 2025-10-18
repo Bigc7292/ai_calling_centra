@@ -11,6 +11,7 @@ async function quickSetup() {
   const email = 'drivendatadynamics@gmail.com';
   const tenantName = 'AI Calling Center';
   const password = 'TempPassword123!'; // User should change this after first login
+  const tenantId = 'default-tenant-id'; // Added missing tenantId
 
   console.log('🚀 Quick Setup for AI Calling Center');
   console.log(`Setting up user: ${email}`);
@@ -18,7 +19,8 @@ async function quickSetup() {
   console.log('');
 
   try {
-    const response = await fetch('http://localhost:3009/tenants/bootstrap', {
+    // Fixed the URL to use port 3001 instead of 3009
+    const response = await fetch('http://localhost:3001/tenants/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenantId })
@@ -42,7 +44,7 @@ async function quickSetup() {
       console.log(`Error: ${result.error}`);
       console.log('');
       console.log('💡 Make sure:');
-      console.log('1. The API server is running on http://localhost:3007');
+      console.log('1. The API server is running on http://localhost:3001');
       console.log('2. Your Supabase environment variables are configured');
       console.log('3. The Supabase schema has been applied');
     }
@@ -52,7 +54,7 @@ async function quickSetup() {
     console.log('');
     console.log('💡 Make sure:');
     console.log('1. Run "pnpm dev:all" to start the servers');
-    console.log('2. Check that the API is running on http://localhost:3007');
+    console.log('2. Check that the API is running on http://localhost:3001');
   }
 }
 
